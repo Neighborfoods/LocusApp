@@ -1,0 +1,79 @@
+# Production stack for a single Ubuntu instance (Always Free Tier friendly).
+# Run: docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+version: "3.9"
+
+services:
+  # PostgreSQL tuned for ~24GB RAM (Oracle Always Free Ampere). postgis/alpine is multi-arch (arm64).
+  locus_db:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: locus_db
+    restart: always
+    command: ["postgres", "-c", "shared_buffers=6GB", "-c", "effective_cache_size=18GB"]
+    environment:
+      POSTGRES_DB: ${DB_NAME:-locus}
+      POSTGRES_USER: ${DB_USER:-locus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD required}
+    volumes:
+      - locus_db_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    networks:
+      - locus_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-locus} -d ${DB_NAME:-locus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Build is multi-arch via Dockerfile TARGETARCH (arm64 on Oracle Ampere).
+  locus_api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: locus_api
+    restart: always
+    depends_on:
+      locus_db:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      BIND_ADDRESS: "0.0.0.0"
+      PORT: "8080"
+      DATABASE_URL: postgres://${DB_USER:-locus}:${DB_PASSWORD}@locus_db:5432/${DB_NAME:-locus}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+    networks:
+      - locus_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Nginx Proxy Manager: SSL termination and domain routing (admin UI on port 81).
+  locus_proxy:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: locus_proxy
+    restart: always
+    depends_on:
+      locus_api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "81:81"
+    volumes:
+      - locus_proxy_data:/data
+      - locus_proxy_letsencrypt:/etc/letsencrypt
+    networks:
+      - locus_net
+
+volumes:
+  locus_db_data:
+  locus_proxy_data:
+  locus_proxy_letsencrypt:
+
+networks:
+  locus_net:
+    name: locus_network

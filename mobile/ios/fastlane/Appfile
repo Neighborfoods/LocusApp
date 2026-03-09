@@ -1,0 +1,6 @@
+# Locus — App Store Connect / Apple ID (bare RN, zero Expo)
+# Set these in CI or locally via env / match / credentials.
+# app_identifier "com.locus.app"
+# apple_id "your@email.com"
+# team_id "YOUR_TEAM_ID"
+# itc_team_id "YOUR_ITC_TEAM_ID"
