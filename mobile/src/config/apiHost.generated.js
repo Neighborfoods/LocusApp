@@ -1,7 +1,7 @@
 /**
- * Injected by: npm run get-ip
- * Do not edit manually. Run `npm run get-ip` to set your Mac's LAN IP for iOS Simulator.
+ * API base URL (Oracle Cloud Node backend via Nginx :80).
+ * Previously injected by npm run get-ip; now fixed to production backend.
  */
 module.exports = {
-  API_BASE_URL: 'http://172.20.10.2:9000',
+  API_BASE_URL: 'http://129.146.186.180',
 };

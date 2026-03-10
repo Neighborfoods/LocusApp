@@ -1,20 +1,20 @@
-import { create } from 'zustand';
-import { UserPrivateProfile, AuthResponse } from '@types/models';
-import { saveTokens, clearTokens, getTokens } from '@utils/keychain';
-import api from '@api/client';
-import axios from 'axios';
+import api from "@api/client";
+import { AuthResponse, UserPrivateProfile } from "@types/models";
+import { clearTokens, getTokens, saveTokens } from "@utils/keychain";
+import axios from "axios";
+import { create } from "zustand";
 
 /** Minimal guest user for __DEV__ when backend is down (UI development). */
 const GUEST_USER: UserPrivateProfile = {
-  id: 'guest-dev',
-  email: 'guest@dev.local',
-  first_name: 'Guest',
-  last_name: '(Dev)',
-  role: 'member',
-  housing_reason: 'exploring',
+  id: "guest-dev",
+  email: "guest@dev.local",
+  first_name: "Guest",
+  last_name: "(Dev)",
+  role: "member",
+  housing_reason: "exploring",
   is_active: true,
   hobbies: [],
-  kyc_status: 'pending',
+  kyc_status: "pending",
   verification_score: 0,
   created_at: new Date().toISOString(),
 };
@@ -68,10 +68,18 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   login: async (email, password) => {
     set({ isLoading: true });
     try {
-      const { data } = await api.post<{ data: AuthResponse }>('/auth/login', { email, password });
+      const { data } = await api.post<{ data: AuthResponse }>("/auth/login", {
+        email,
+        password,
+      });
       const { user, access_token, refresh_token } = data.data;
       await saveTokens(access_token, refresh_token);
-      set({ user, isAuthenticated: true, isInitialized: true, isLoading: false });
+      set({
+        user,
+        isAuthenticated: true,
+        isInitialized: true,
+        isLoading: false,
+      });
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -82,42 +90,71 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   register: async (input) => {
     set({ isLoading: true });
     try {
-      const { data } = await api.post<{ data: AuthResponse }>('/auth/register', input, {
-        timeout: 20_000,
-      });
-      console.log('[REG_FLOW] API Success');
+      const { data } = await api.post<{ data: AuthResponse }>(
+        "/auth/register",
+        input,
+        {
+          timeout: 20_000,
+        },
+      );
+      console.log("[REG_FLOW] API Success");
       const { user, access_token, refresh_token } = data.data;
 
       await saveTokens(access_token, refresh_token);
       const verified = await getTokens();
-      const storageOk = verified?.accessToken === access_token && verified?.refreshToken === refresh_token;
+      const storageOk =
+        verified?.accessToken === access_token &&
+        verified?.refreshToken === refresh_token;
       if (!storageOk) {
         await clearTokens();
         set({ isLoading: false });
-        throw new Error('Could not save session. Please try again.');
+        throw new Error("Could not save session. Please try again.");
       }
-      console.log('[REG_FLOW] Storage Verified');
+      console.log("[REG_FLOW] Storage Verified");
 
-      set({ user, isAuthenticated: true, isInitialized: true, isLoading: false });
-      console.log('[REG_FLOW] Transitioning to App');
+      set({
+        user,
+        isAuthenticated: true,
+        isInitialized: true,
+        isLoading: false,
+      });
+      console.log("[REG_FLOW] Transitioning to App");
     } catch (error: unknown) {
       set({ isLoading: false });
       if (axios.isAxiosError(error)) {
         const status = error.response?.status;
-        const msg = (error.response?.data as any)?.error?.message ?? error.message ?? '';
+        const msg =
+          (error.response?.data as any)?.error?.message ?? error.message ?? "";
         const msgLower = String(msg).toLowerCase();
-        if (status === 400 && (msgLower.includes('exist') || msgLower.includes('already') || msgLower.includes('registered'))) {
-          const userExistsError = Object.assign(new Error(msg || 'An account with this email already exists.'), {
-            isUserExists: true as const,
-            prefillEmail: input.email,
-          });
+        if (
+          status === 400 &&
+          (msgLower.includes("exist") ||
+            msgLower.includes("already") ||
+            msgLower.includes("registered"))
+        ) {
+          const userExistsError = Object.assign(
+            new Error(msg || "An account with this email already exists."),
+            {
+              isUserExists: true as const,
+              prefillEmail: input.email,
+            },
+          );
           throw userExistsError;
         }
-        if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
-          throw Object.assign(error, { message: 'Request timed out. Please check your connection and try again.' });
+        if (
+          error.code === "ECONNABORTED" ||
+          error.message?.toLowerCase().includes("timeout")
+        ) {
+          throw Object.assign(error, {
+            message:
+              "Request timed out. Please check your connection and try again.",
+          });
         }
         if (error.response?.status === undefined && error.message) {
-          throw Object.assign(error, { message: 'Network error. Please check your connection and try again.' });
+          throw Object.assign(error, {
+            message:
+              "Network error. Please check your connection and try again.",
+          });
         }
       }
       throw error;
@@ -126,7 +163,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   logout: async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post("/auth/logout");
     } catch {
       // ignore server errors on logout
     } finally {
@@ -141,14 +178,29 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     try {
       const tokens = await getTokens();
       if (!tokens?.accessToken?.trim()) {
-        set({ user: null, isAuthenticated: false, isInitialized: true, isLoading: false });
+        set({
+          user: null,
+          isAuthenticated: false,
+          isInitialized: true,
+          isLoading: false,
+        });
         return;
       }
-      const { data } = await api.get<{ data: UserPrivateProfile }>('/auth/me');
-      set({ user: data.data, isAuthenticated: true, isInitialized: true, isLoading: false });
+      const { data } = await api.get<{ data: UserPrivateProfile }>("/auth/me");
+      set({
+        user: data.data,
+        isAuthenticated: true,
+        isInitialized: true,
+        isLoading: false,
+      });
     } catch {
       await clearTokens();
-      set({ user: null, isAuthenticated: false, isInitialized: true, isLoading: false });
+      set({
+        user: null,
+        isAuthenticated: false,
+        isInitialized: true,
+        isLoading: false,
+      });
     }
   },
 
@@ -163,29 +215,48 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   /** Emergency exit: Skip to Map (Dev). Sets mock user so app/nav work; completely skips login check. */
   forceTransitionToApp: () => {
     if (!__DEV__) return;
-    console.log('[AUTH_STORE] forceTransitionToApp (Skip to Map – bypass, mock user)');
-    set({ user: GUEST_USER, isAuthenticated: true, isInitialized: true, isLoading: false });
+    console.log(
+      "[AUTH_STORE] forceTransitionToApp (Skip to Map – bypass, mock user)",
+    );
+    set({
+      user: GUEST_USER,
+      isAuthenticated: true,
+      isInitialized: true,
+      isLoading: false,
+    });
   },
 
   guestLogin: () => {
     if (!__DEV__) return;
-    console.log('[AUTH_STORE] guestLogin (Dev Mode – backend bypass)');
-    set({ user: GUEST_USER, isAuthenticated: true, isInitialized: true, isLoading: false });
+    console.log("[AUTH_STORE] guestLogin (Dev Mode – backend bypass)");
+    set({
+      user: GUEST_USER,
+      isAuthenticated: true,
+      isInitialized: true,
+      isLoading: false,
+    });
   },
 
   setServerReachable: (reachable) => set({ serverReachable: reachable }),
 
   bypassLogin: () => {
     if (!__DEV__) return;
-    console.log('[AUTH_STORE] bypassLogin (Dev-Override – backend unreachable)');
-    set({ user: GUEST_USER, isAuthenticated: true, isInitialized: true, isLoading: false });
+    console.log(
+      "[AUTH_STORE] bypassLogin (Dev-Override – backend unreachable)",
+    );
+    set({
+      user: GUEST_USER,
+      isAuthenticated: true,
+      isInitialized: true,
+      isLoading: false,
+    });
   },
 }));
 
 // ── Truth Protocol: log every auth state change to catch unexpected flips ───────
 if (__DEV__) {
   useAuthStore.subscribe((state) => {
-    console.log('[AUTH_STORE]', {
+    console.log("[AUTH_STORE]", {
       isAuthenticated: state.isAuthenticated,
       isInitialized: state.isInitialized,
       isLoading: state.isLoading,
@@ -195,7 +266,7 @@ if (__DEV__) {
 }
 
 // Subscribe to API client signout events (triggered by failed refresh)
-import { authEvents } from '@api/client';
-authEvents.on('signout', () => {
+import { authEvents } from "@api/client";
+authEvents.on("signout", () => {
   useAuthStore.getState().logout();
 });

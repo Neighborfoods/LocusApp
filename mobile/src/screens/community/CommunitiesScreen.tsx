@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { AppTextInput } from '@components/AppTextInput';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -133,7 +134,7 @@ export default function CommunitiesScreen() {
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Icon name="magnify" size={20} color={Colors.textSecondary} />
-          <TextInput
+          <AppTextInput
             style={styles.searchInput}
             value={search}
             onChangeText={handleSearch}
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   mapBtn: { width: 40, height: 40, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   searchRow: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.md },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  searchInput: { flex: 1, color: Colors.text, fontSize: FontSize.md },
+  searchInput: { flex: 1, color: Colors.text, fontSize: FontSize.md, textTransform: 'none' },
   typeFilterList: { paddingHorizontal: Spacing.xxl, gap: Spacing.sm, paddingBottom: Spacing.md },
   typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   typePillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },

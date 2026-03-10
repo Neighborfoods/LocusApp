@@ -1,9 +1,19 @@
 import React, { Component, ErrorInfo, ReactNode, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
 import { checkServerStatus } from './src/api/client';
 import { useAuthStore } from './src/store/authStore';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 /** Catches render errors so we see which component crashed (check Metro/JS logs). */
 class AppErrorBoundary extends Component<
@@ -51,9 +61,11 @@ function AppContent() {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppErrorBoundary>
-        <AppContent />
-      </AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AppErrorBoundary>
+          <AppContent />
+        </AppErrorBoundary>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }

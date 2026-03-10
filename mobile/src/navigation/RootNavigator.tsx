@@ -1,11 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { NavigationContainer, createNavigationContainerRef, CommonActions } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useTheme } from '@theme/useTheme';
-import { useAuthStore } from '@store/authStore';
-import AuthNavigator from './AuthNavigator';
-import AppNavigator from './AppNavigator';
+import {
+    CommonActions,
+    NavigationContainer,
+    createNavigationContainerRef,
+} from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuthStore } from "@store/authStore";
+import { useTheme } from "@theme/useTheme";
+import React, { useEffect, useRef } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import AppNavigator from "./AppNavigator";
+import AuthNavigator from "./AuthNavigator";
 
 const Stack = createNativeStackNavigator();
 
@@ -13,11 +17,19 @@ const navigationRef = createNavigationContainerRef();
 
 export default function RootNavigator() {
   const { colors, isDark } = useTheme();
-  const { isAuthenticated, isInitialized, isLoading, loadUser } = useAuthStore();
+  const { isAuthenticated, isInitialized, isLoading, loadUser } =
+    useAuthStore();
   const hasLoggedLoadUser = useRef(false);
 
   useEffect(() => {
-    console.log('[NAV_TRACE] Current State: isAuthenticated=', isAuthenticated, 'isInitialized=', isInitialized, 'isLoading=', isLoading);
+    console.log(
+      "[NAV_TRACE] Current State: isAuthenticated=",
+      isAuthenticated,
+      "isInitialized=",
+      isInitialized,
+      "isLoading=",
+      isLoading,
+    );
   }, [isAuthenticated, isInitialized, isLoading]);
 
   useEffect(() => {
@@ -25,7 +37,7 @@ export default function RootNavigator() {
       const state = useAuthStore.getState();
       if (!hasLoggedLoadUser.current) {
         hasLoggedLoadUser.current = true;
-        console.log('[RootNavigator] loadUser done', {
+        console.log("[RootNavigator] loadUser done", {
           isAuthenticated: state.isAuthenticated,
           isInitialized: state.isInitialized,
           hasUser: !!state.user,
@@ -41,8 +53,8 @@ export default function RootNavigator() {
       navigationRef.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'Tabs' as never }],
-        })
+          routes: [{ name: "Tabs" as never }],
+        }),
       );
     });
     return () => cancelAnimationFrame(frameId);
@@ -59,7 +71,7 @@ export default function RootNavigator() {
   return (
     <NavigationContainer
       ref={navigationRef}
-      key={isAuthenticated ? 'app' : 'auth'}
+      key={isAuthenticated ? "app" : "auth"}
       theme={{
         dark: isDark,
         colors: {
@@ -80,7 +92,7 @@ export default function RootNavigator() {
 const styles = StyleSheet.create({
   loader: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

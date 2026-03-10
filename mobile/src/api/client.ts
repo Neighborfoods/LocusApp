@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 import { getTokens, saveTokens, clearTokens } from '@utils/keychain';
 import { getApiBaseUrl } from '@utils/apiBaseUrl';
 
-/** Fixed LAN IP for all platforms – iOS Simulator cannot use localhost/127.0.0.1. */
+/** Oracle Cloud Node backend (http://129.146.186.180 via getApiBaseUrl). */
 const BASE_URL = getApiBaseUrl();
 console.log('[NET_DEBUG] Target URL:', BASE_URL);
 console.log('[NET_DEBUG] Full base URL:', BASE_URL);
@@ -49,6 +49,10 @@ api.interceptors.response.use(
     const status = error?.response?.status ?? 'err';
     const url = error?.config?.url ?? '';
     console.log(`[NET_RES] ${ts()} ${status} ${url}`);
+    if (status === 404) {
+      error.message = error.message || 'This feature is not available on the current backend.';
+      error.is404 = true;
+    }
     try {
       const errPayload = {
         message: error?.message,
@@ -60,8 +64,6 @@ api.interceptors.response.use(
     } catch (_) {
       console.error('[API_ERROR] Full Error:', String(error));
     }
-    console.error('[API_FATAL]', error?.response?.data ?? error?.message ?? error);
-    if (error?.response?.status) console.error('[API_FATAL] status', error.response.status);
     return Promise.reject(error);
   },
 );
@@ -152,31 +154,19 @@ export const authEvents = {
   },
 };
 
-/** Ping base URL on startup. Uses same network bridge URL for connectivity verification. */
+/** Ping GET /health on Node backend (Oracle Cloud). */
 export async function checkServerStatus(): Promise<boolean> {
-  const url = BASE_URL;
-  console.log('[SERVER_CHECK] Verifying connectivity to', url);
-  if (__DEV__) {
-    console.log('[CHECK] Is backend running on host port 9000 (container 8080)?');
-  }
   const t0 = Date.now();
   try {
-    const res = await api.get(url, { timeout: 5000, validateStatus: () => true });
+    const res = await api.get('/health', { timeout: 5000, validateStatus: () => true });
     const elapsed = Date.now() - t0;
-    const alive = res != null && typeof res.status === 'number';
-    console.log(`[SERVER_CHECK] ${alive ? 'ALIVE' : 'DOWN'} ${res?.status} ${url} (${elapsed}ms)`);
-    return alive;
+    const ok = res?.status === 200;
+    console.log(`[SERVER_CHECK] ${ok ? 'ALIVE' : 'DOWN'} ${res?.status} /health (${elapsed}ms)`);
+    return ok;
   } catch (e: any) {
     const elapsed = Date.now() - t0;
     const code = e?.code ?? e?.errno ?? 'unknown';
-    const message = e?.message ?? String(e);
-    console.warn(
-      `[SERVER_CHECK] Server unreachable ${url} (${elapsed}ms) code=${code} message=${message}`,
-      e?.response?.status != null ? `status=${e.response.status}` : ''
-    );
-    if (__DEV__) {
-      console.warn('[CHECK] Is backend running on host port 9000 (container 8080)?');
-    }
+    console.warn(`[SERVER_CHECK] /health unreachable (${elapsed}ms) code=${code}`);
     return false;
   }
 }

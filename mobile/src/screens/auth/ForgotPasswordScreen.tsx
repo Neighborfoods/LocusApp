@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
+import { AppTextInput } from '@components/AppTextInput';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -55,7 +56,7 @@ export default function ForgotPasswordScreen() {
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
-              <TextInput
+              <AppTextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   errorBanner: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: `${Colors.danger}15`, borderWidth: 1, borderColor: `${Colors.danger}40`, borderRadius: BorderRadius.md, padding: Spacing.md },
   errorText: { color: Colors.danger, fontSize: FontSize.sm },
-  input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, color: Colors.text, fontSize: FontSize.md },
+  input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, color: Colors.text, fontSize: FontSize.md, textTransform: 'none' },
   btn: { overflow: 'hidden', borderRadius: BorderRadius.lg },
   btnGrad: { alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.lg },
   btnText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },

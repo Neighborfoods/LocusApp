@@ -131,7 +131,7 @@ export default function NetworkCheckScreen() {
       )}
 
       <Text style={[styles.footer, { color: colors.textDisabled }]}>
-        Ensure the backend is running (host port 9000; container 8080). Run npm run get-ip to set the host IP.
+        Backend: http://129.146.186.180 (Oracle Cloud Node + Nginx).
       </Text>
     </ScrollView>
   );

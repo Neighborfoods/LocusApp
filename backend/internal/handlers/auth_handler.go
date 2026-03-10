@@ -102,7 +102,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 }
 
 // POST /auth/logout
-func (h *AuthHandler) Logout(c *gin.Context) {
+func (h *AuthHandler) ut(c *gin.Context) {
 	// In a production app, we'd add the JWT to a blocklist in Redis here.
 	// For now, client-side token deletion is sufficient.
 	response.Success(c, gin.H{"message": "Logged out successfully"})

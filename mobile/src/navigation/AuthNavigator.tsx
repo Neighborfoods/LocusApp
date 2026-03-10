@@ -42,7 +42,7 @@ export default function AuthNavigator() {
       <Stack.Screen
         name="Register"
         component={RegisterScreen}
-        options={{ animation: 'slide_from_right' }}
+        options={{ title: 'Locus', animation: 'slide_from_right' }}
       />
       <Stack.Screen
         name="ForgotPassword"

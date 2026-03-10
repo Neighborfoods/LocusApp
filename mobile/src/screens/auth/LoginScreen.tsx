@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -11,6 +10,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { AppTextInput } from '@components/AppTextInput';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,7 +59,11 @@ export default function LoginScreen() {
       await login(data.email, data.password);
       // Navigation handled automatically by RootNavigator auth gate
     } catch (err: any) {
-      const message = err?.response?.data?.error?.message ?? 'Login failed. Please try again.';
+      const status = err?.response?.status;
+      const message =
+        status === 404
+          ? 'Use registration instead. This backend does not support login yet.'
+          : err?.response?.data?.error?.message ?? 'Login failed. Please try again.';
       setApiError(message);
       shake();
     }
@@ -99,7 +103,7 @@ export default function LoginScreen() {
               render={({ field: { onChange, onBlur, value } }) => (
                 <View style={[styles.inputRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }, errors.email && { borderBottomColor: colors.danger }]}>
                   <Icon name="email-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
+                  <AppTextInput
                     style={[styles.input, { color: colors.text }]}
                     placeholder="you@example.com"
                     placeholderTextColor={colors.textDisabled}
@@ -125,7 +129,7 @@ export default function LoginScreen() {
               render={({ field: { onChange, onBlur, value } }) => (
                 <View style={[styles.inputRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }, errors.password && { borderBottomColor: colors.danger }]}>
                   <Icon name="lock-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                  <TextInput
+                  <AppTextInput
                     style={[styles.input, { color: colors.text }]}
                     placeholder="••••••••"
                     placeholderTextColor={colors.textDisabled}
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   inputIcon: { marginRight: Spacing.sm },
-  input: { flex: 1, fontSize: FontSize.base },
+  input: { flex: 1, fontSize: FontSize.base, textTransform: 'none' },
   eyeBtn: { padding: Spacing.xs },
   fieldError: { fontSize: FontSize.xs },
   forgotRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.xs },
