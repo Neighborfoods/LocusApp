@@ -1,3 +1,4 @@
+import { AppTextInput } from "@components/AppTextInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthStackParams } from "@navigation/AuthNavigator";
 import { useNavigation } from "@react-navigation/native";
@@ -8,18 +9,17 @@ import { useTheme } from "@theme/useTheme";
 import React, { useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-    ActivityIndicator,
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { AppTextInput } from "@components/AppTextInput";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { z } from "zod";
 
@@ -723,7 +723,7 @@ export default function RegisterScreen() {
         )}
 
         <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
+          onPress={() => (navigation as any).navigate("Login", {})}
           style={styles.signInRow}
         >
           <Text style={[styles.signInText, { color: colors.textSecondary }]}>
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     fontSize: FontSize.md,
-    textTransform: 'none',
+    textTransform: "none",
   },
   errorText: { fontSize: FontSize.xs, marginTop: 2 },
   errorBanner: {

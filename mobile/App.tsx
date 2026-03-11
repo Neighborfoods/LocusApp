@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RootNavigator from './src/navigation/RootNavigator';
+import { ThemeProvider } from './src/theme/ThemeContext';
 import { checkServerStatus } from './src/api/client';
 import { useAuthStore } from './src/store/authStore';
 
@@ -60,13 +61,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <AppErrorBoundary>
-          <AppContent />
-        </AppErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <AppErrorBoundary>
+            <AppContent />
+          </AppErrorBoundary>
+        </GestureHandlerRootView>
       </QueryClientProvider>
-    </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
 

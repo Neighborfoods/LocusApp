@@ -12,7 +12,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@theme/useTheme';
-import type { AppleColorSet } from '@theme/colors';
 import { Spacing, BorderRadius, FontSize, FontWeight } from '@theme/index';
 import { AuthStackParams } from '@navigation/AuthNavigator';
 
@@ -21,14 +20,14 @@ const { width, height } = Dimensions.get('window');
 interface Slide {
   id: string;
   icon: string;
-  iconColorKey: keyof AppleColorSet;
-  gradientColorKey: keyof AppleColorSet;
+  iconColorKey: string;
+  gradientColorKey: string;
   title: string;
   subtitle: string;
   caption: string;
 }
 
-function getSlides(colors: AppleColorSet): Slide[] {
+function getSlides(): Slide[] {
   return [
     {
       id: '1',
@@ -52,7 +51,7 @@ function getSlides(colors: AppleColorSet): Slide[] {
     },
     {
       id: '3',
-      icon: 'map-marker-radius',
+      icon: 'map-marker-radius-outline',
       iconColorKey: 'gold',
       gradientColorKey: 'goldAlpha',
       title: 'Live anywhere.\nOwn everywhere.',
@@ -63,7 +62,7 @@ function getSlides(colors: AppleColorSet): Slide[] {
   ];
 }
 
-function SlideItem({ slide, colors }: { slide: Slide; colors: AppleColorSet }) {
+function SlideItem({ slide, colors }: { slide: Slide; colors: Record<string, string> }) {
   const iconColor = colors[slide.iconColorKey] as string;
   const gradientColor = colors[slide.gradientColorKey] as string;
   return (
@@ -87,7 +86,7 @@ function SlideItem({ slide, colors }: { slide: Slide; colors: AppleColorSet }) {
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
-  const SLIDES = getSlides(colors);
+  const SLIDES = getSlides();
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParams>>();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -97,12 +96,12 @@ export default function OnboardingScreen() {
     if (activeIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
     } else {
-      navigation.replace('Register');
+      navigation.replace('Register', {});
     }
   };
 
   const handleSkip = () => {
-    navigation.replace('Login');
+    navigation.replace('Login', {});
   };
 
   const isLast = activeIndex === SLIDES.length - 1;
@@ -130,7 +129,7 @@ export default function OnboardingScreen() {
           const idx = Math.round(e.nativeEvent.contentOffset.x / width);
           setActiveIndex(idx);
         }}
-        renderItem={({ item }) => <SlideItem slide={item} colors={colors} />}
+        renderItem={({ item }) => <SlideItem slide={item} colors={colors as unknown as Record<string, string>} />}
       />
 
       <View style={[styles.bottomControls, { paddingBottom: 48 }]}>

@@ -1,5 +1,5 @@
 import api from './client';
-import { Community, Membership, WaitingListEntry, TransferRequest, PaginatedData } from '@types/models';
+import { Community, Membership, WaitingListEntry, TransferRequest, PaginatedData } from '@/types/models';
 
 export interface CreateCommunityPayload {
   name: string;
@@ -39,7 +39,7 @@ export const communitiesApi = {
     if (params?.page) searchParams.append('page', String(params.page));
     if (params?.limit) searchParams.append('limit', String(params.limit));
     const { data } = await api.get(`/communities?${searchParams}`);
-    return { data: data.data ?? [], meta: data.meta };
+    return { items: data.data ?? [], meta: data.meta };
   },
 
   nearby: async (lat: number, lng: number, radius = 50): Promise<Community[]> => {

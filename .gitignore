@@ -45,3 +45,16 @@ ios/fastlane/report.xml
 ios/fastlane/Preview.html
 ios/fastlane/screenshots/
 ios/fastlane/test_output/
+
+# Xcode build artifacts
+mobile/ios/DerivedData/
+ios/DerivedData/
+
+# Duplicate Pods artifacts (created by git on case-insensitive fs)
+mobile/ios/Pods/Headers 2/
+mobile/ios/Pods/hermes-engine 2/
+
+# General build caches
+*.xcindex
+*.mdb
+CompilationCache.noindex/

@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { getTokens } from '@utils/keychain';
 
-const WS_BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api/v1', '').replace('http', 'ws') ?? 'ws://129.146.186.180';
+const WS_BASE_URL = process.env.EXPO_PUBLIC_API_URL?.replace('/api/v1', '').replace('https', 'wss').replace('http', 'ws') ?? 'ws://129.146.186.180';
 
 interface WsMessage {
   type: string;

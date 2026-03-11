@@ -12,11 +12,15 @@ CREATE TABLE IF NOT EXISTS users (
 -- Properties table (for LOCUS)
 CREATE TABLE IF NOT EXISTS properties (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(12,2),
-    location JSONB,
     owner_id UUID REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    type VARCHAR(50),
+    address TEXT,
+    price DECIMAL(10,2),
+    description TEXT,
+    location JSONB,
+    photos JSONB DEFAULT '[]',
+    status VARCHAR(50) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -26,6 +30,9 @@ CREATE INDEX IF NOT EXISTS idx_properties_owner ON properties(owner_id);
 
 -- Migration: auth support (run once on existing DBs; safe for fresh install)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- Auth tokens
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -96,3 +103,21 @@ CREATE TABLE IF NOT EXISTS vote_casts (
     UNIQUE(vote_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_vote_casts_vote ON vote_casts(vote_id);
+
+-- Migration: extend properties if existing table has old schema
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]';
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+
+-- Support issues
+CREATE TABLE IF NOT EXISTS support_issues (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    title VARCHAR(255),
+    description TEXT,
+    type VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_issues_user ON support_issues(user_id);

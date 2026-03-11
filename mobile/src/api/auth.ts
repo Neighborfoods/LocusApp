@@ -1,5 +1,5 @@
 import api from './client';
-import { AuthResponse, UserPrivateProfile } from '@types/models';
+import { AuthResponse, UserPrivateProfile } from '@/types/models';
 
 export interface RegisterPayload {
   first_name: string;

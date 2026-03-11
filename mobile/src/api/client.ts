@@ -2,17 +2,16 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 import { getTokens, saveTokens, clearTokens } from '@utils/keychain';
 import { getApiBaseUrl } from '@utils/apiBaseUrl';
 
-/** Oracle Cloud Node backend (http://129.146.186.180 via getApiBaseUrl). */
+/** Oracle Cloud Node backend: http://129.146.186.180 (no trailing slash, no port). */
 const BASE_URL = getApiBaseUrl();
-console.log('[NET_DEBUG] Target URL:', BASE_URL);
-console.log('[NET_DEBUG] Full base URL:', BASE_URL);
+if (__DEV__) console.log('[NET_DEBUG] baseURL:', BASE_URL);
 
 export { getApiBaseUrl };
 
 // ── Axios instance ─────────────────────────────────────────────────────────────
 const api: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 20_000,
+  timeout: 10_000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -21,16 +20,27 @@ const api: AxiosInstance = axios.create({
 
 const ts = () => new Date().toISOString();
 
+function fullUrl(config: InternalAxiosRequestConfig): string {
+  const base = (config.baseURL ?? '').replace(/\/$/, '');
+  const path = config.url ?? '';
+  return path.startsWith('http') ? path : base + (path.startsWith('/') ? path : '/' + path);
+}
+
 // ── Request: attach JWT + log every outgoing request ───────────────────────────
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    console.log('[NET_DEBUG] Fetching with IP...');
     const method = (config.method ?? 'get').toUpperCase();
-    const url = config.url ?? config.baseURL ?? '';
-    console.log(`[NET_REQ] ${ts()} ${method} ${url}`);
+    const url = fullUrl(config);
+    console.log('[API REQUEST]', method, url, config);
+    if (__DEV__) {
+      console.log(`[NET_REQ] ${ts()} ${method} ${url}`);
+    }
     const tokens = await getTokens();
     if (tokens?.accessToken) {
       config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -40,29 +50,25 @@ api.interceptors.request.use(
 // ── Response: log every response status ───────────────────────────────────────
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    const status = response?.status ?? 0;
-    const url = response?.config?.url ?? '';
-    console.log(`[NET_RES] ${ts()} ${status} ${url}`);
+    if (__DEV__) {
+      const status = response?.status ?? 0;
+      const url = response?.config ? fullUrl(response.config as InternalAxiosRequestConfig) : '';
+      if (__DEV__) console.log(`[NET_RES] ${ts()} ${status} ${url}`);
+    }
     return response;
   },
   (error) => {
     const status = error?.response?.status ?? 'err';
-    const url = error?.config?.url ?? '';
-    console.log(`[NET_RES] ${ts()} ${status} ${url}`);
+    const url = error?.config ? fullUrl(error.config as InternalAxiosRequestConfig) : '';
+    if (__DEV__) console.log(`[NET_RES] ${ts()} ${status} ${url}`);
+    try {
+      if (__DEV__) { const p = { message: error?.message, code: error?.code, status: error?.response?.status, data: error?.response?.data }; console.error('[API_ERROR] Full Error:', JSON.stringify(p)); }
+    } catch (_) {
+      if (__DEV__) console.error('[API_ERROR] Full Error:', String(error));
+    }
     if (status === 404) {
       error.message = error.message || 'This feature is not available on the current backend.';
       error.is404 = true;
-    }
-    try {
-      const errPayload = {
-        message: error?.message,
-        code: error?.code,
-        status: error?.response?.status,
-        data: error?.response?.data,
-      };
-      console.error('[API_ERROR] Full Error:', JSON.stringify(errPayload));
-    } catch (_) {
-      console.error('[API_ERROR] Full Error:', String(error));
     }
     return Promise.reject(error);
   },
@@ -158,15 +164,15 @@ export const authEvents = {
 export async function checkServerStatus(): Promise<boolean> {
   const t0 = Date.now();
   try {
-    const res = await api.get('/health', { timeout: 5000, validateStatus: () => true });
+    const res = await api.get('/health', { timeout: 10_000, validateStatus: () => true });
     const elapsed = Date.now() - t0;
     const ok = res?.status === 200;
-    console.log(`[SERVER_CHECK] ${ok ? 'ALIVE' : 'DOWN'} ${res?.status} /health (${elapsed}ms)`);
+    if (__DEV__) console.log(`[SERVER_CHECK] ${ok ? 'ALIVE' : 'DOWN'} ${res?.status} /health (${elapsed}ms)`);
     return ok;
   } catch (e: any) {
     const elapsed = Date.now() - t0;
     const code = e?.code ?? e?.errno ?? 'unknown';
-    console.warn(`[SERVER_CHECK] /health unreachable (${elapsed}ms) code=${code}`);
+    if (__DEV__) console.warn(`[SERVER_CHECK] /health unreachable (${elapsed}ms) code=${code}`);
     return false;
   }
 }

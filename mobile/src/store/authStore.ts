@@ -1,5 +1,5 @@
 import api from "@api/client";
-import { AuthResponse, UserPrivateProfile } from "@types/models";
+import { AuthResponse, UserPrivateProfile } from '@/types/models';
 import { clearTokens, getTokens, saveTokens } from "@utils/keychain";
 import axios from "axios";
 import { create } from "zustand";
@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
           timeout: 20_000,
         },
       );
-      console.log("[REG_FLOW] API Success");
+      if (__DEV__) console.log("[REG_FLOW] API Success");
       const { user, access_token, refresh_token } = data.data;
 
       await saveTokens(access_token, refresh_token);
@@ -110,7 +110,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         set({ isLoading: false });
         throw new Error("Could not save session. Please try again.");
       }
-      console.log("[REG_FLOW] Storage Verified");
+      if (__DEV__) console.log("[REG_FLOW] Storage Verified");
 
       set({
         user,
@@ -118,7 +118,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         isInitialized: true,
         isLoading: false,
       });
-      console.log("[REG_FLOW] Transitioning to App");
+      if (__DEV__) console.log("[REG_FLOW] Transitioning to App");
     } catch (error: unknown) {
       set({ isLoading: false });
       if (axios.isAxiosError(error)) {
@@ -215,9 +215,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   /** Emergency exit: Skip to Map (Dev). Sets mock user so app/nav work; completely skips login check. */
   forceTransitionToApp: () => {
     if (!__DEV__) return;
-    console.log(
-      "[AUTH_STORE] forceTransitionToApp (Skip to Map – bypass, mock user)",
-    );
+    if (__DEV__) console.log("[AUTH_STORE] forceTransitionToApp (Skip to Map – bypass, mock user)");
     set({
       user: GUEST_USER,
       isAuthenticated: true,
@@ -228,7 +226,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   guestLogin: () => {
     if (!__DEV__) return;
-    console.log("[AUTH_STORE] guestLogin (Dev Mode – backend bypass)");
+    if (__DEV__) console.log("[AUTH_STORE] guestLogin (Dev Mode – backend bypass)");
     set({
       user: GUEST_USER,
       isAuthenticated: true,
@@ -241,9 +239,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 
   bypassLogin: () => {
     if (!__DEV__) return;
-    console.log(
-      "[AUTH_STORE] bypassLogin (Dev-Override – backend unreachable)",
-    );
+    if (__DEV__) console.log("[AUTH_STORE] bypassLogin (Dev-Override – backend unreachable)");
     set({
       user: GUEST_USER,
       isAuthenticated: true,
@@ -256,12 +252,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
 // ── Truth Protocol: log every auth state change to catch unexpected flips ───────
 if (__DEV__) {
   useAuthStore.subscribe((state) => {
-    console.log("[AUTH_STORE]", {
-      isAuthenticated: state.isAuthenticated,
-      isInitialized: state.isInitialized,
-      isLoading: state.isLoading,
-      hasUser: !!state.user,
-    });
+    if (__DEV__) console.log("[AUTH_STORE]", { isAuthenticated: state.isAuthenticated, isInitialized: state.isInitialized, isLoading: state.isLoading, hasUser: !!state.user });
   });
 }
 

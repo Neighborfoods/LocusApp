@@ -2,7 +2,7 @@
  * API base URL: simulator and production use Oracle Cloud Node backend (Nginx :80).
  */
 
-/** Oracle Cloud Node backend — no port (Nginx on 80). */
+/** Oracle Cloud Node backend — HTTP (Nginx :80). TestFlight with self-signed cert; use HTTPS + CA cert for App Store. */
 const API_BASE_URL = 'http://129.146.186.180';
 
 /**

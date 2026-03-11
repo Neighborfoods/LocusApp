@@ -29,10 +29,8 @@ function formatError(error: unknown, isFatal?: boolean): LoggedError {
 }
 
 function logToConsole(entry: LoggedError, label: string) {
-  console.error(`${PREFIX} ${label}`, entry.message, entry.stack ?? '');
-  if (__DEV__ && entry.stack) {
-    console.error(entry.stack);
-  }
+  if (__DEV__) console.error(`${PREFIX} ${label}`, entry.message, entry.stack ?? '');
+  if (__DEV__ && entry.stack) console.error(entry.stack);
 }
 
 /**
@@ -56,7 +54,7 @@ export function installUnhandledRejectionHandler(): void {
   (global as any).__handledRejections = tracking;
 
   const originalHandler = (global as any).onunhandledrejection;
-  (global as any).onunhandledrejection = (e: PromiseRejectionEvent) => {
+  (global as any).onunhandledrejection = (e: { reason?: unknown }) => {
     const key = e?.reason ?? e;
     if (!tracking.has(key)) {
       tracking.add(key);

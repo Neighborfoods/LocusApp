@@ -1,18 +1,21 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, TextInput,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { AppTextInput } from '@components/AppTextInput';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { TabParams } from '@navigation/AppNavigator';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Colors, Spacing, BorderRadius, FontSize, FontWeight, Shadows } from '@theme/index';
-import { Community } from '@types/models';
-import { COMMUNITY_TYPE_LABELS, formatCents } from '@utils/formatters';
+import { useTheme } from '@theme/useTheme';
+import { Spacing, BorderRadius, FontSize, FontWeight, Shadows } from '@theme/index';
+import { Community } from '@/types/models';
+import { COMMUNITY_TYPE_LABELS } from '@utils/formatters';
 import api from '@api/client';
 import { AppStackParams } from '@navigation/AppNavigator';
 
@@ -22,16 +25,16 @@ type TypeFilter = 'all' | 'urban' | 'suburban' | 'rural' | 'resort' | 'commercia
 const TYPE_FILTERS: { value: TypeFilter; label: string; icon: string }[] = [
   { value: 'all', label: 'All', icon: 'apps' },
   { value: 'urban', label: 'Urban', icon: 'city' },
-  { value: 'suburban', label: 'Suburban', icon: 'home-city' },
+  { value: 'suburban', label: 'Suburban', icon: 'city' },
   { value: 'rural', label: 'Rural', icon: 'tree' },
   { value: 'resort', label: 'Resort', icon: 'umbrella-beach' },
 ];
 
 function CommunityListCard({ community, onPress }: { community: Community; onPress: () => void }) {
+  const { colors } = useTheme();
   const availableRooms = community.available_rooms ?? 0;
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Image */}
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surface }]} onPress={onPress} activeOpacity={0.8}>
       <FastImage
         style={styles.cardImage}
         source={{ uri: community.cover_url ?? 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=400', priority: FastImage.priority.normal }}
@@ -39,39 +42,37 @@ function CommunityListCard({ community, onPress }: { community: Community; onPre
       />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.cardGrad} />
 
-      {/* Top badges */}
       <View style={styles.cardTopRow}>
-        <View style={styles.typeBadge}>
-          <Text style={styles.typeBadgeText}>{COMMUNITY_TYPE_LABELS[community.type]}</Text>
+        <View style={[styles.typeBadge, { borderColor: colors.border }]}>
+          <Text style={[styles.typeBadgeText, { color: colors.text }]}>{COMMUNITY_TYPE_LABELS[community.type]}</Text>
         </View>
         {availableRooms > 0 && (
-          <View style={styles.availBadge}>
-            <Icon name="door-open" size={12} color={Colors.accent} />
-            <Text style={styles.availText}>{availableRooms} open</Text>
+          <View style={[styles.availBadge, { backgroundColor: `${colors.accent}20`, borderColor: colors.accent }]}>
+            <Icon name="door-open" size={12} color={colors.accent} />
+            <Text style={[styles.availText, { color: colors.accent }]}>{availableRooms} open</Text>
           </View>
         )}
       </View>
 
-      {/* Bottom content */}
       <View style={styles.cardBottom}>
         <Text style={styles.cardName} numberOfLines={1}>{community.name}</Text>
         <Text style={styles.cardLocation}>
-          <Icon name="map-marker-outline" size={12} color={Colors.textSecondary} />
+          <Icon name="map-marker-outline" size={12} color={colors.textSecondary} />
           {'  '}{community.city}, {community.state}
         </Text>
         <View style={styles.cardMeta}>
           <View style={styles.metaChip}>
-            <Icon name="account-group-outline" size={14} color={Colors.primary} />
-            <Text style={styles.metaText}>{community.member_count}/{community.capacity}</Text>
+            <Icon name="account-group-outline" size={14} color={colors.primary} />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>{community.member_count}/{community.capacity}</Text>
           </View>
           <View style={styles.metaChip}>
-            <Icon name="star" size={14} color={Colors.gold} />
-            <Text style={styles.metaText}>{community.rating.toFixed(1)}</Text>
+            <Icon name="star" size={14} color={colors.gold} />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>{community.rating.toFixed(1)}</Text>
           </View>
           {community.lifestyle_tags && community.lifestyle_tags.length > 0 && (
             <View style={styles.metaChip}>
-              <Icon name="tag" size={12} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{community.lifestyle_tags[0]}</Text>
+              <Icon name="dots-vertical" size={12} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{community.lifestyle_tags[0]}</Text>
             </View>
           )}
         </View>
@@ -81,12 +82,23 @@ function CommunityListCard({ community, onPress }: { community: Community; onPre
 }
 
 export default function CommunitiesScreen() {
+  const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParams>>();
+  const route = useRoute<RouteProp<TabParams, 'Communities'>>();
+  const autoFocusSearch = route.params?.autoFocusSearch;
+  const searchInputRef = useRef<TextInput>(null);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [sort, setSort] = useState<SortOption>('rating');
   const searchTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (autoFocusSearch) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [autoFocusSearch]);
 
   const handleSearch = (text: string) => {
     setSearch(text);
@@ -121,51 +133,51 @@ export default function CommunitiesScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Communities</Text>
-        <TouchableOpacity style={styles.mapBtn} onPress={() => navigation.navigate('Map' as any)}>
-          <Icon name="map-outline" size={20} color={Colors.primary} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Communities</Text>
+        <TouchableOpacity style={[styles.mapBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => (navigation as any).navigate('Tabs', { screen: 'Map' })}>
+          <Icon name="map-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Search bar */}
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Icon name="magnify" size={20} color={Colors.textSecondary} />
+        <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Icon name="magnify" size={20} color={colors.textSecondary} />
           <AppTextInput
-            style={styles.searchInput}
+            ref={searchInputRef}
+            style={[styles.searchInput, { color: colors.text }]}
             value={search}
             onChangeText={handleSearch}
             placeholder="Search communities, cities..."
-            placeholderTextColor={Colors.textDisabled}
+            placeholderTextColor={colors.textDisabled}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => { setSearch(''); setDebouncedSearch(''); }}>
-              <Icon name="close-circle" size={18} color={Colors.textSecondary} />
+              <Icon name="close" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Type filters */}
       <View>
         <FlatList
           horizontal
           data={TYPE_FILTERS}
           keyExtractor={(item) => item.value}
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.typeFilterList}
           renderItem={({ item }) => {
             const active = typeFilter === item.value;
             return (
               <TouchableOpacity
-                style={[styles.typePill, active && styles.typePillActive]}
+                style={[styles.typePill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { backgroundColor: colors.primary, borderColor: colors.primary }]}
                 onPress={() => setTypeFilter(item.value)}
               >
-                <Icon name={item.icon} size={14} color={active ? '#fff' : Colors.textSecondary} />
-                <Text style={[styles.typePillText, active && styles.typePillTextActive]}>
+                <Icon name={item.icon} size={14} color={active ? colors.textOnPrimary : colors.textSecondary} />
+                <Text style={[styles.typePillText, { color: colors.textSecondary }, active && styles.typePillTextActive]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -174,33 +186,32 @@ export default function CommunitiesScreen() {
         />
       </View>
 
-      {/* Sort row */}
       <View style={styles.sortRow}>
-        <Text style={styles.countText}>{communities.length} communities</Text>
+        <Text style={[styles.countText, { color: colors.textSecondary }]}>{communities.length} communities</Text>
         <TouchableOpacity
-          style={styles.sortBtn}
+          style={[styles.sortBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => {
             const opts: SortOption[] = ['rating', 'member_count', 'available_rooms', 'created_at'];
             const idx = opts.indexOf(sort);
             setSort(opts[(idx + 1) % opts.length]);
           }}
         >
-          <Icon name="sort" size={16} color={Colors.textSecondary} />
-          <Text style={styles.sortText}>
+          <Icon name="filter-outline" size={16} color={colors.textSecondary} />
+          <Text style={[styles.sortText, { color: colors.text }]}>
             {sort === 'rating' ? 'Top rated' : sort === 'member_count' ? 'Largest' : sort === 'available_rooms' ? 'Most open' : 'Newest'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* List */}
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
           data={communities}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <CommunityListCard
               community={item}
@@ -209,57 +220,62 @@ export default function CommunitiesScreen() {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.primary} />}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          initialNumToRender={6}
+          updateCellsBatchingPeriod={50}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.3}
-          ListFooterComponent={isFetchingNextPage ? <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} /> : null}
+          ListFooterComponent={isFetchingNextPage ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} /> : null}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Icon name="home-search" size={48} color={Colors.textDisabled} />
-              <Text style={styles.emptyTitle}>No communities found</Text>
-              <Text style={styles.emptySubtitle}>Try adjusting your filters or search</Text>
+              <Icon name="magnify" size={48} color={colors.textDisabled} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No communities nearby</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>Be the first to create one!</Text>
             </View>
           }
         />
       )}
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
+  container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xxl, paddingTop: Spacing['4xl'], paddingBottom: Spacing.lg },
-  headerTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.text },
-  mapBtn: { width: 40, height: 40, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  headerTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold },
+  mapBtn: { width: 40, height: 40, borderRadius: BorderRadius.full, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   searchRow: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.md },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  searchInput: { flex: 1, color: Colors.text, fontSize: FontSize.md, textTransform: 'none' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderWidth: 1, borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  searchInput: { flex: 1, fontSize: FontSize.md, textTransform: 'none' },
   typeFilterList: { paddingHorizontal: Spacing.xxl, gap: Spacing.sm, paddingBottom: Spacing.md },
-  typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  typePillActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  typePillText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, borderWidth: 1 },
+  typePillText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   typePillTextActive: { color: '#fff' },
   sortRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xxl, marginBottom: Spacing.md },
-  countText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  sortText: { fontSize: FontSize.xs, color: Colors.text, fontWeight: FontWeight.medium },
+  countText: { fontSize: FontSize.sm },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, borderWidth: 1 },
+  sortText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   listContent: { paddingHorizontal: Spacing.xxl, gap: Spacing.lg, paddingBottom: 100 },
-  card: { height: 200, borderRadius: BorderRadius.xl, overflow: 'hidden', backgroundColor: Colors.surface, ...Shadows.md },
+  card: { height: 200, borderRadius: BorderRadius.xl, overflow: 'hidden', ...Shadows.md },
   cardImage: { ...StyleSheet.absoluteFillObject },
   cardGrad: { ...StyleSheet.absoluteFillObject },
   cardTopRow: { position: 'absolute', top: Spacing.md, left: Spacing.md, right: Spacing.md, flexDirection: 'row', gap: Spacing.sm },
-  typeBadge: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: Spacing.md, paddingVertical: 3, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.border },
-  typeBadgeText: { color: Colors.text, fontSize: FontSize.xs },
-  availBadge: { flexDirection: 'row', gap: 4, alignItems: 'center', backgroundColor: `${Colors.accent}20`, paddingHorizontal: Spacing.md, paddingVertical: 3, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: Colors.accent },
-  availText: { color: Colors.accent, fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
+  typeBadge: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: Spacing.md, paddingVertical: 3, borderRadius: BorderRadius.full, borderWidth: 1 },
+  typeBadgeText: { fontSize: FontSize.xs },
+  availBadge: { flexDirection: 'row', gap: 4, alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 3, borderRadius: BorderRadius.full, borderWidth: 1 },
+  availText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   cardBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.md, gap: 4 },
   cardName: { color: '#fff', fontSize: FontSize.lg, fontWeight: FontWeight.bold },
   cardLocation: { color: 'rgba(255,255,255,0.7)', fontSize: FontSize.xs },
   cardMeta: { flexDirection: 'row', gap: Spacing.sm, marginTop: 4 },
   metaChip: { flexDirection: 'row', gap: 4, alignItems: 'center' },
-  metaText: { color: Colors.textSecondary, fontSize: FontSize.xs },
+  metaText: { fontSize: FontSize.xs },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: Spacing.md },
-  emptyTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.text },
-  emptySubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary },
+  emptyTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold },
+  emptySubtitle: { fontSize: FontSize.sm },
 });

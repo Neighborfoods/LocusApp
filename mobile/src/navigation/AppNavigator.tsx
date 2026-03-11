@@ -1,8 +1,8 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Colors } from "@theme/index";
+import { useTheme } from "@theme/useTheme";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Tab Screens
@@ -17,7 +17,8 @@ import CommunityDetailScreen from "@screens/community/CommunityDetailScreen";
 import CommunityMembersScreen from "@screens/community/CommunityMembersScreen";
 import ApplyCommunityScreen from "@screens/community/ApplyCommunityScreen";
 import CreateCommunityScreen from "@screens/community/CreateCommunityScreen";
-import TransferScreen from "@screens/community/TransferScreen";
+import TransferScreen from "@screens/finance/TransferScreen";
+import SavingsScreen from "@screens/finance/SavingsScreen";
 import PropertyDetailScreen from "@screens/map/PropertyDetailScreen";
 import EditProfileScreen from "@screens/profile/EditProfileScreen";
 import NotificationsScreen from "@screens/profile/NotificationsScreen";
@@ -27,17 +28,19 @@ import ItemRentalsScreen from "@screens/rentals/ItemRentalsScreen";
 import CreateVoteScreen from "@screens/voting/CreateVoteScreen";
 import VoteDetailScreen from "@screens/voting/VoteDetailScreen";
 import VotingScreen from "@screens/voting/VotingScreen";
+import AddPropertyScreen from "@screens/property/AddPropertyScreen";
+import ComingSoonScreen from "@screens/stub/ComingSoonScreen";
 
 export type TabParams = {
   Home: undefined;
   Map: undefined;
-  Communities: undefined;
+  Communities: { autoFocusSearch?: boolean } | undefined;
   Finance: undefined;
   Profile: undefined;
 };
 
 export type AppStackParams = {
-  Tabs: undefined;
+  Tabs: { screen?: string; params?: { autoFocusSearch?: boolean } } | undefined;
   CommunityDetail: { communityId: string };
   CreateCommunity: undefined;
   ApplyCommunity: { communityId: string };
@@ -48,30 +51,39 @@ export type AppStackParams = {
   CreateVote: { communityId: string };
   ItemRentals: { communityId: string };
   ItemDetail: { itemId: string; communityId: string };
-  Transfer: { fromCommunityId: string };
+  Transfer: { fromCommunityId?: string };
+  Savings: undefined;
   Notifications: undefined;
   EditProfile: undefined;
   Settings: undefined;
+  AddProperty: undefined;
+  TransactionHistory: undefined;
+  HelpFAQ: undefined;
+  ReportIssue: undefined;
+  AboutLocus: undefined;
+  MyRentals: undefined;
+  TransferCommunity: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParams>();
 const Stack = createNativeStackNavigator<AppStackParams>();
 
 function TabBar({ state, descriptors, navigation }: any) {
+  const { colors } = useTheme();
   const tabs = [
-    { name: "Home", icon: "home", activeIcon: "home", label: "Home" },
-    { name: "Map", icon: "map-outline", activeIcon: "map", label: "Map" },
+    { name: "Home", icon: "home-outline", activeIcon: "home", label: "Home" },
+    { name: "Map", icon: "map-outline", activeIcon: "map", label: "Explore" },
     {
       name: "Communities",
-      icon: "home-group",
-      activeIcon: "home-group",
-      label: "Community",
+      icon: "account-group-outline",
+      activeIcon: "account-group",
+      label: "Communities",
     },
     {
       name: "Finance",
       icon: "chart-line",
       activeIcon: "chart-line",
-      label: "Finance",
+      label: "Insights",
     },
     {
       name: "Profile",
@@ -84,7 +96,7 @@ function TabBar({ state, descriptors, navigation }: any) {
   const Inner = (
     <View style={styles.tabInner}>
       {state.routes.map((route: any, index: number) => {
-        const { options } = descriptors[route.key];
+        const { options: _options } = descriptors[route.key];
         const isFocused = state.index === index;
         const tab = tabs[index];
 
@@ -100,24 +112,34 @@ function TabBar({ state, descriptors, navigation }: any) {
         };
 
         return (
-          <View key={route.key} style={styles.tabItem}>
+          <TouchableOpacity
+            key={route.key}
+            style={styles.tabItem}
+            onPress={onPress}
+            activeOpacity={0.7}
+          >
             <Icon
               name={isFocused ? tab.activeIcon : tab.icon}
               size={24}
-              color={isFocused ? Colors.primary : Colors.textSecondary}
-              onPress={onPress}
+              color={isFocused ? colors.primary : colors.textSecondary}
             />
-            {/* Dot indicator for active tab */}
-            {isFocused && <View style={styles.activeDot} />}
-          </View>
+            <Text
+              style={[
+                styles.tabLabel,
+                { color: isFocused ? colors.primary : colors.textSecondary },
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
         );
       })}
     </View>
   );
 
   return (
-    <View style={styles.tabBar}>
-      <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
+    <View style={[styles.tabBar, { borderTopColor: colors.tabBarBorder }]}>
+      <View style={[StyleSheet.absoluteFill, styles.tabBarBg, { backgroundColor: colors.tabBar }]} />
       {Inner}
     </View>
   );
@@ -127,7 +149,7 @@ function BottomTabNavigator() {
   return (
     <Tab.Navigator
       tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, lazy: true }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
@@ -138,12 +160,13 @@ function BottomTabNavigator() {
   );
 }
 
-export default function AppNavigator() {
+function StackNavigatorInner() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: Colors.bg },
+        contentStyle: { backgroundColor: colors.background },
         animation: "slide_from_right",
       }}
     >
@@ -173,7 +196,8 @@ export default function AppNavigator() {
       />
       <Stack.Screen name="ItemRentals" component={ItemRentalsScreen} />
       <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
-      <Stack.Screen name="Transfer" component={TransferScreen} />
+      <Stack.Screen name="Transfer" component={TransferScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Savings" component={SavingsScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
@@ -181,8 +205,19 @@ export default function AppNavigator() {
       />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AddProperty" component={AddPropertyScreen} options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="TransactionHistory" component={ComingSoonScreen} />
+      <Stack.Screen name="HelpFAQ" component={ComingSoonScreen} />
+      <Stack.Screen name="ReportIssue" component={ComingSoonScreen} />
+      <Stack.Screen name="AboutLocus" component={ComingSoonScreen} />
+      <Stack.Screen name="MyRentals" component={ComingSoonScreen} />
+      <Stack.Screen name="TransferCommunity" component={ComingSoonScreen} />
     </Stack.Navigator>
   );
+}
+
+export default function AppNavigator() {
+  return <StackNavigatorInner />;
 }
 
 const styles = StyleSheet.create({
@@ -193,12 +228,9 @@ const styles = StyleSheet.create({
     right: 0,
     height: Platform.OS === "ios" ? 84 : 64,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
     overflow: "hidden",
   },
-  tabBarBg: {
-    backgroundColor: Colors.surface,
-  },
+  tabBarBg: {},
   tabInner: {
     flex: 1,
     flexDirection: "row",
@@ -209,13 +241,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    height: 50,
+    paddingVertical: 8,
   },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.primary,
-    marginTop: 4,
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 2,
   },
 });

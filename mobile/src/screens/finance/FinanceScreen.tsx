@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  FlatList, ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors, Spacing, BorderRadius, FontSize, FontWeight, Shadows } from '@theme/index';
-import { FundSummary, FundTransaction, MemberEarning, Community } from '@types/models';
+import { useTheme } from '@theme/useTheme';
+import type { ThemeColors } from '@theme/ThemeContext';
+import { Spacing, BorderRadius, FontSize, FontWeight } from '@theme/index';
+import { FundSummary, FundTransaction, MemberEarning, Community } from '@/types/models';
 import { formatCents, formatPercent, formatRelative, formatDate } from '@utils/formatters';
 import api from '@api/client';
 import { AppStackParams } from '@navigation/AppNavigator';
@@ -17,27 +19,31 @@ import { useAuthStore } from '@store/authStore';
 
 // ── Transaction row ────────────────────────────────────────────────────────────
 
-const TX_ICONS: Record<string, { icon: string; color: string }> = {
-  rental_income: { icon: 'home-currency-usd', color: Colors.accent },
-  distribution: { icon: 'cash-multiple', color: Colors.primary },
-  expense: { icon: 'cash-minus', color: Colors.danger },
-  reserve: { icon: 'safe', color: Colors.gold },
-  purchase: { icon: 'home-plus', color: Colors.info },
-};
+function getTxMeta(type: string, colors: ThemeColors): { icon: string; color: string } {
+  const map: Record<string, { icon: string; color: string }> = {
+    rental_income: { icon: 'home', color: colors.accent },
+    distribution: { icon: 'cash-multiple', color: colors.primary },
+    expense: { icon: 'cash-minus', color: colors.danger },
+    reserve: { icon: 'safe', color: colors.gold },
+    purchase: { icon: 'home-plus', color: colors.info },
+  };
+  return map[type] ?? { icon: 'swap-horizontal-bold', color: colors.textSecondary };
+}
 
 function TxRow({ tx }: { tx: FundTransaction }) {
-  const meta = TX_ICONS[tx.type] ?? { icon: 'swap-horizontal', color: Colors.textSecondary };
+  const { colors } = useTheme();
+  const meta = getTxMeta(tx.type, colors);
   const isPositive = ['rental_income', 'distribution'].includes(tx.type);
   return (
-    <View style={styles.txRow}>
+    <View style={[styles.txRow, { borderBottomColor: colors.border }]}>
       <View style={[styles.txIcon, { backgroundColor: `${meta.color}20` }]}>
         <Icon name={meta.icon} size={20} color={meta.color} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.txLabel}>{tx.description || tx.type.replace(/_/g, ' ')}</Text>
-        <Text style={styles.txDate}>{formatRelative(tx.created_at)}</Text>
+        <Text style={[styles.txLabel, { color: colors.text }]}>{tx.description || tx.type.replace(/_/g, ' ')}</Text>
+        <Text style={[styles.txDate, { color: colors.textSecondary }]}>{formatRelative(tx.created_at)}</Text>
       </View>
-      <Text style={[styles.txAmount, { color: isPositive ? Colors.accent : Colors.danger }]}>
+      <Text style={[styles.txAmount, { color: isPositive ? colors.accent : colors.danger }]}>
         {isPositive ? '+' : '-'}{formatCents(tx.amount_cents)}
       </Text>
     </View>
@@ -47,13 +53,14 @@ function TxRow({ tx }: { tx: FundTransaction }) {
 // ── Earnings row ──────────────────────────────────────────────────────────────
 
 function EarningRow({ earning }: { earning: MemberEarning }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.earningRow}>
+    <View style={[styles.earningRow, { borderBottomColor: colors.border }]}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.earningPeriod}>{formatDate(earning.created_at)}</Text>
-        <Text style={styles.earningEquity}>{formatPercent(earning.equity_snapshot_pct)} equity</Text>
+        <Text style={[styles.earningPeriod, { color: colors.text }]}>{formatDate(earning.created_at)}</Text>
+        <Text style={[styles.earningEquity, { color: colors.textSecondary }]}>{formatPercent(earning.equity_snapshot_pct ?? earning.equity_pct_at_time)} equity</Text>
       </View>
-      <Text style={styles.earningAmount}>+{formatCents(earning.amount_cents)}</Text>
+      <Text style={[styles.earningAmount, { color: colors.accent }]}>+{formatCents(earning.amount_cents)}</Text>
     </View>
   );
 }
@@ -61,8 +68,9 @@ function EarningRow({ earning }: { earning: MemberEarning }) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function FinanceScreen() {
+  const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParams>>();
-  const { user } = useAuthStore();
+  useAuthStore();
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
 
   const { data: myCommunities = [] } = useQuery<Community[]>({
@@ -106,12 +114,12 @@ export default function FinanceScreen() {
 
   if (!activeCommunityId) {
     return (
-      <View style={styles.emptyContainer}>
-        <Icon name="home-analytics" size={64} color={Colors.textDisabled} />
-        <Text style={styles.emptyTitle}>No communities yet</Text>
-        <Text style={styles.emptySubtitle}>Join a community to start earning from your property</Text>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+        <Icon name="chart-line" size={64} color={colors.textDisabled} />
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>No communities yet</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>Join a community to start earning from your property</Text>
         <TouchableOpacity style={styles.findBtn} onPress={() => navigation.navigate('Communities' as any)}>
-          <LinearGradient colors={Colors.gradPrimary} style={styles.findBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+          <LinearGradient colors={[...colors.gradPrimary]} style={styles.findBtnGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
             <Text style={styles.findBtnText}>Find a Community</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -121,27 +129,25 @@ export default function FinanceScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={fundLoading} onRefresh={refetch} tintColor={Colors.primary} />}
+      refreshControl={<RefreshControl refreshing={fundLoading} onRefresh={refetch} tintColor={colors.primary} />}
     >
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Finance</Text>
-        <Text style={styles.headerSubtitle}>Your equity income</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Finance</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Your equity income</Text>
       </View>
 
-      {/* Community selector */}
       {myCommunities.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.communityPicker}>
           {myCommunities.map((c) => (
             <TouchableOpacity
               key={c.id}
-              style={[styles.commChip, activeCommunityId === c.id && styles.commChipActive]}
+              style={[styles.commChip, { backgroundColor: colors.surface, borderColor: colors.border }, activeCommunityId === c.id && { backgroundColor: colors.primary, borderColor: colors.primary }]}
               onPress={() => setSelectedCommunity(c.id)}
             >
-              <Text style={[styles.commChipText, activeCommunityId === c.id && styles.commChipTextActive]}>
+              <Text style={[styles.commChipText, { color: colors.textSecondary }, activeCommunityId === c.id && styles.commChipTextActive]}>
                 {c.name}
               </Text>
             </TouchableOpacity>
@@ -149,8 +155,7 @@ export default function FinanceScreen() {
         </ScrollView>
       )}
 
-      {/* Total earnings banner */}
-      <LinearGradient colors={Colors.gradPrimary} style={styles.earningsBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <LinearGradient colors={[...colors.gradPrimary]} style={styles.earningsBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View>
           <Text style={styles.bannerLabel}>Your total earnings</Text>
           <Text style={styles.bannerAmount}>{formatCents(totalEarnings)}</Text>
@@ -161,84 +166,79 @@ export default function FinanceScreen() {
         </View>
       </LinearGradient>
 
-      {/* Fund summary cards */}
       {fundSummary && (
         <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Icon name="bank" size={24} color={Colors.primary} />
-            <Text style={styles.summaryValue}>{formatCents(fundSummary.balance_cents)}</Text>
-            <Text style={styles.summaryLabel}>Fund balance</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="bank" size={24} color={colors.primary} />
+            <Text style={[styles.summaryValue, { color: colors.text }]}>{formatCents(fundSummary.balance_cents)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Fund balance</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Icon name="home-currency-usd" size={24} color={Colors.accent} />
-            <Text style={styles.summaryValue}>{formatCents(fundSummary.total_income_cents)}</Text>
-            <Text style={styles.summaryLabel}>Total income</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="home" size={24} color={colors.accent} />
+            <Text style={[styles.summaryValue, { color: colors.text }]}>{formatCents(fundSummary.total_income_cents ?? fundSummary.total_earnings_cents)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total income</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Icon name="calendar-month" size={24} color={Colors.gold} />
-            <Text style={styles.summaryValue}>{formatCents(fundSummary.monthly_income_cents)}</Text>
-            <Text style={styles.summaryLabel}>This month</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="history" size={24} color={colors.gold} />
+            <Text style={[styles.summaryValue, { color: colors.text }]}>{formatCents(fundSummary.monthly_income_cents ?? 0)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>This month</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Icon name="safe" size={24} color={Colors.info} />
-            <Text style={styles.summaryValue}>{formatCents(fundSummary.reserve_cents)}</Text>
-            <Text style={styles.summaryLabel}>Reserve</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Icon name="wallet" size={24} color={colors.info} />
+            <Text style={[styles.summaryValue, { color: colors.text }]}>{formatCents(fundSummary.reserve_cents ?? fundSummary.reserve_amount_cents)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Reserve</Text>
           </View>
         </View>
       )}
 
-      {/* My earnings */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My earnings history</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>My earnings history</Text>
         {myEarnings.length === 0 ? (
           <View style={styles.emptySection}>
-            <Text style={styles.emptySectionText}>No distributions yet</Text>
+            <Text style={[styles.emptySectionText, { color: colors.textSecondary }]}>No distributions yet</Text>
           </View>
         ) : (
           myEarnings.slice(0, 5).map((e) => <EarningRow key={e.id} earning={e} />)
         )}
       </View>
 
-      {/* Fund transactions */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Community fund activity</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Community fund activity</Text>
         </View>
         {txLoading ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
           transactions.slice(0, 10).map((tx) => <TxRow key={tx.id} tx={tx} />)
         )}
       </View>
 
-      {/* Transfer CTA */}
       <TouchableOpacity
-        style={styles.transferCard}
+        style={[styles.transferCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => navigation.navigate('Transfer', { fromCommunityId: activeCommunityId })}
       >
         <View style={styles.transferLeft}>
-          <Icon name="swap-horizontal" size={24} color={Colors.primary} />
+          <Icon name="swap-horizontal-bold" size={24} color={colors.primary} />
           <View>
-            <Text style={styles.transferTitle}>Transfer to another community</Text>
-            <Text style={styles.transferSubtitle}>Move your equity between communities</Text>
+            <Text style={[styles.transferTitle, { color: colors.text }]}>Transfer to another community</Text>
+            <Text style={[styles.transferSubtitle, { color: colors.textSecondary }]}>Move your equity between communities</Text>
           </View>
         </View>
-        <Icon name="chevron-right" size={20} color={Colors.textSecondary} />
+        <Icon name="chevron-right" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
+  container: { flex: 1 },
   scroll: { paddingBottom: 100 },
   header: { paddingHorizontal: Spacing.xxl, paddingTop: Spacing['4xl'], paddingBottom: Spacing.lg },
-  headerTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.text },
-  headerSubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  headerTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, marginTop: 2 },
+  headerSubtitle: { fontSize: FontSize.sm, marginTop: 2 },
   communityPicker: { paddingHorizontal: Spacing.xxl, gap: Spacing.sm, paddingBottom: Spacing.lg },
-  commChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
-  commChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  commChipText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+  commChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, borderWidth: 1 },
+  commChipText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   commChipTextActive: { color: '#fff' },
   earningsBanner: { marginHorizontal: Spacing.xxl, borderRadius: BorderRadius.xl, padding: Spacing.xxl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl },
   bannerLabel: { color: 'rgba(255,255,255,0.7)', fontSize: FontSize.sm, marginBottom: 4 },
@@ -246,30 +246,30 @@ const styles = StyleSheet.create({
   bannerSub: { color: 'rgba(255,255,255,0.5)', fontSize: FontSize.xs, marginTop: 4 },
   bannerRight: { opacity: 0.8 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.xxl, gap: Spacing.md, marginBottom: Spacing.xl },
-  summaryCard: { flex: 1, minWidth: '45%', backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
-  summaryValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.text },
-  summaryLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  summaryCard: { flex: 1, minWidth: '45%', borderRadius: BorderRadius.xl, padding: Spacing.lg, gap: Spacing.sm, borderWidth: 1 },
+  summaryValue: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
+  summaryLabel: { fontSize: FontSize.xs },
   section: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.xl },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.text, marginBottom: Spacing.md },
-  txRow: { flexDirection: 'row', gap: Spacing.md, alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold, marginBottom: Spacing.md },
+  txRow: { flexDirection: 'row', gap: Spacing.md, alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1 },
   txIcon: { width: 40, height: 40, borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center' },
-  txLabel: { fontSize: FontSize.sm, color: Colors.text, textTransform: 'capitalize' },
-  txDate: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  txLabel: { fontSize: FontSize.sm, textTransform: 'capitalize' },
+  txDate: { fontSize: FontSize.xs, marginTop: 2 },
   txAmount: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
-  earningRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  earningPeriod: { fontSize: FontSize.sm, color: Colors.text, fontWeight: FontWeight.medium },
-  earningEquity: { fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 2 },
-  earningAmount: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.accent },
+  earningRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1 },
+  earningPeriod: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
+  earningEquity: { fontSize: FontSize.xs, marginTop: 2 },
+  earningAmount: { fontSize: FontSize.md, fontWeight: FontWeight.bold },
   emptySection: { paddingVertical: Spacing.xl, alignItems: 'center' },
-  emptySectionText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  transferCard: { marginHorizontal: Spacing.xxl, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.border },
+  emptySectionText: { fontSize: FontSize.sm },
+  transferCard: { marginHorizontal: Spacing.xxl, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: BorderRadius.xl, padding: Spacing.lg, borderWidth: 1 },
   transferLeft: { flexDirection: 'row', gap: Spacing.md, alignItems: 'center', flex: 1 },
-  transferTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.text },
-  transferSubtitle: { fontSize: FontSize.xs, color: Colors.textSecondary },
-  emptyContainer: { flex: 1, backgroundColor: Colors.bg, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingHorizontal: Spacing.xxl },
-  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.text, textAlign: 'center' },
-  emptySubtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, textAlign: 'center' },
+  transferTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold },
+  transferSubtitle: { fontSize: FontSize.xs },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, paddingHorizontal: Spacing.xxl },
+  emptyTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, textAlign: 'center' },
+  emptySubtitle: { fontSize: FontSize.sm, textAlign: 'center' },
   findBtn: { overflow: 'hidden', borderRadius: BorderRadius.xl, marginTop: Spacing.md },
   findBtnGrad: { paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xxl },
   findBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.bold },

@@ -1,0 +1,6 @@
+module Pods_Locus {
+  umbrella header "Pods-Locus-umbrella.h"
+
+  export *
+  module * { export * }
+}

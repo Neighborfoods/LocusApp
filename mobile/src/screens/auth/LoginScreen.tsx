@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
+  Alert,
 } from 'react-native';
 import { AppTextInput } from '@components/AppTextInput';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,10 +18,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { safeStorage } from '@utils/safeStorage';
 import { useTheme } from '@theme/useTheme';
 import { Spacing, BorderRadius, FontSize, FontWeight } from '@theme/index';
 import { useAuthStore } from '@store/authStore';
 import { AuthStackParams } from '@navigation/AuthNavigator';
+import { BiometricService, type BiometricCapability } from '../../services/BiometricService';
 
 const schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -29,19 +32,81 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const SAVED_EMAIL_KEY = 'saved_email';
+
 export default function LoginScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParams>>();
   const route = useRoute<RouteProp<AuthStackParams, 'Login'>>();
-  const { login, isLoading, guestLogin, bypassLogin, serverReachable } = useAuthStore();
+  const { login, isLoading, loadUser, guestLogin, bypassLogin, serverReachable } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [biometricCapability, setBiometricCapability] = useState<BiometricCapability | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricChecked, setBiometricChecked] = useState(false);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors }, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { email: route.params?.prefillEmail ?? '', password: '' },
   });
+
+  const handleBiometricLogin = async () => {
+    if (!biometricCapability?.available) return;
+    const result = await BiometricService.authenticate(
+      `Sign in to LOCUS with ${biometricCapability.label}`
+    );
+    if (result.success) {
+      await loadUser();
+      const { isAuthenticated } = useAuthStore.getState();
+      if (!isAuthenticated) {
+        const storedEmail = await safeStorage.getItem(SAVED_EMAIL_KEY);
+        if (storedEmail) reset({ email: storedEmail, password: '' });
+        setApiError('Please enter your password once to re-enable biometrics.');
+      }
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const capability = await BiometricService.getCapability();
+      if (cancelled) return;
+      setBiometricCapability(capability);
+      if (capability.available) {
+        const enabled = await BiometricService.isEnabled();
+        if (cancelled) return;
+        setBiometricEnabled(enabled);
+        setBiometricChecked(true);
+        if (enabled) {
+          const result = await BiometricService.authenticate(
+            `Sign in to LOCUS with ${capability.label}`
+          );
+          if (cancelled) return;
+          if (result.success) {
+            await loadUser();
+            const { isAuthenticated } = useAuthStore.getState();
+            if (!isAuthenticated) {
+              const storedEmail = await safeStorage.getItem(SAVED_EMAIL_KEY);
+              if (storedEmail) reset({ email: storedEmail, password: '' });
+              setApiError('Please enter your password once to re-enable biometrics.');
+            }
+          }
+        }
+      } else {
+        setBiometricChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loadUser, reset]);
+
+  useEffect(() => {
+    const stored = route.params?.prefillEmail ?? '';
+    if (stored) return;
+    safeStorage.getItem(SAVED_EMAIL_KEY).then((email) => {
+      if (email) reset({ email, password: '' });
+    });
+  }, [route.params?.prefillEmail, reset]);
 
   const shake = () => {
     Animated.sequence([
@@ -57,7 +122,21 @@ export default function LoginScreen() {
     setApiError(null);
     try {
       await login(data.email, data.password);
-      // Navigation handled automatically by RootNavigator auth gate
+      await safeStorage.setItem(SAVED_EMAIL_KEY, data.email);
+      const capability = await BiometricService.getCapability();
+      if (capability.available) {
+        const alreadyEnabled = await BiometricService.isEnabled();
+        if (!alreadyEnabled) {
+          Alert.alert(
+            `Enable ${capability.label}?`,
+            `Sign in faster next time using ${capability.label}.`,
+            [
+              { text: 'Not Now', style: 'cancel' },
+              { text: 'Enable', onPress: () => BiometricService.setEnabled(true) },
+            ]
+          );
+        }
+      }
     } catch (err: any) {
       const status = err?.response?.status;
       const message =
@@ -81,7 +160,7 @@ export default function LoginScreen() {
       >
         <View style={styles.logoSection}>
           <View style={[styles.logoBox, { backgroundColor: colors.primary }]}>
-            <Icon name="home-group" size={32} color="#fff" />
+            <Icon name="account-group" size={32} color="#fff" />
           </View>
           <Text style={[styles.logoText, { color: colors.text }]}>locus</Text>
           <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your community. Your home. Your income.</Text>
@@ -90,7 +169,7 @@ export default function LoginScreen() {
         <Animated.View style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}>
           {apiError && (
             <View style={[styles.apiError, { backgroundColor: colors.dangerAlpha, borderColor: colors.danger }]}>
-              <Icon name="alert-circle-outline" size={16} color={colors.danger} />
+              <Icon name="alert-circle" size={16} color={colors.danger} />
               <Text style={[styles.apiErrorText, { color: colors.danger }]}>{apiError}</Text>
             </View>
           )}
@@ -172,6 +251,19 @@ export default function LoginScreen() {
               <Text style={styles.submitText}>Sign in</Text>
             )}
           </TouchableOpacity>
+
+          {biometricChecked && biometricEnabled && biometricCapability?.available && (
+            <TouchableOpacity
+              style={[styles.biometricBtn, { borderColor: colors.border }]}
+              onPress={handleBiometricLogin}
+              activeOpacity={0.7}
+            >
+              <Icon name={biometricCapability.iconName as any} size={32} color={colors.primary} />
+              <Text style={[styles.biometricLabel, { color: colors.textSecondary }]}>
+                Sign in with {biometricCapability.label}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <View style={styles.registerRow}>
             <Text style={[styles.registerHint, { color: colors.textSecondary }]}>New to Locus?</Text>
@@ -257,6 +349,18 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   submitText: { color: '#fff', fontSize: FontSize.md, fontWeight: FontWeight.semibold },
+  biometricBtn: {
+    alignItems: 'center',
+    marginTop: 24,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  biometricLabel: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '500',
+  },
   registerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.lg },
   registerHint: { fontSize: FontSize.base },
   registerLink: { fontSize: FontSize.base, fontWeight: FontWeight.semibold },

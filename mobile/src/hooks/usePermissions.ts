@@ -7,7 +7,7 @@ type PermissionKey = 'camera' | 'location' | 'notifications' | 'photos';
 const PERMISSION_MAP: Record<PermissionKey, Permission> = {
   camera: Platform.OS === 'ios' ? PERMISSIONS.IOS.CAMERA : PERMISSIONS.ANDROID.CAMERA,
   location: Platform.OS === 'ios' ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-  notifications: Platform.OS === 'ios' ? PERMISSIONS.IOS.NOTIFICATIONS : PERMISSIONS.ANDROID.POST_NOTIFICATIONS,
+  notifications: (Platform.OS === 'ios' ? 'ios.permission.NOTIFICATIONS' : 'android.permission.POST_NOTIFICATIONS') as Permission,
   photos: Platform.OS === 'ios' ? PERMISSIONS.IOS.PHOTO_LIBRARY : PERMISSIONS.ANDROID.READ_MEDIA_IMAGES,
 };
 

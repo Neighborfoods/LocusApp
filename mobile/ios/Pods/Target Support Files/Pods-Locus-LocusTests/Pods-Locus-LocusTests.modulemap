@@ -1,0 +1,6 @@
+module Pods_Locus_LocusTests {
+  umbrella header "Pods-Locus-LocusTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

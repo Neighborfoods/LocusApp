@@ -36,6 +36,7 @@ export interface UserPrivateProfile extends UserPublicProfile {
   housing_reason: HousingReason;
   is_active: boolean;
   last_login_at?: string;
+  kyc_verified?: boolean;
 }
 
 export interface AuthTokens {
@@ -115,6 +116,7 @@ export interface CommunityMapPin {
   available_rooms: number;
   rating: number;
   avatar_url?: string;
+  cover_url?: string;
 }
 
 export interface WaitingListEntry {
@@ -176,6 +178,8 @@ export interface PropertyMapPin {
   type: PropertyType;
   estimated_value_cents: number;
   city: string;
+  is_available?: boolean;
+  rent_cents_per_month?: number;
 }
 
 // ── Finance ───────────────────────────────────────────────────────────────────
@@ -185,8 +189,11 @@ export interface FundSummary {
   balance_cents: number;
   reserve_pct: number;
   reserve_amount_cents: number;
+  reserve_cents?: number;
   available_cents: number;
   total_earnings_cents: number;
+  total_income_cents?: number;
+  monthly_income_cents?: number;
   last_distribution?: string;
 }
 
@@ -207,6 +214,7 @@ export interface MemberEarning {
   community_id: string;
   user_id: string;
   equity_pct_at_time: number;
+  equity_snapshot_pct?: number;
   amount_cents: number;
   period: string;
   status: 'pending' | 'paid' | 'held';
@@ -249,6 +257,11 @@ export interface ItemBooking {
 
 // ── Governance ────────────────────────────────────────────────────────────────
 
+export interface VoteBallotInfo {
+  choice: 'yes' | 'no' | 'abstain';
+  created_at: string;
+}
+
 export interface Vote {
   id: string;
   community_id: string;
@@ -261,17 +274,20 @@ export interface Vote {
   target_property?: Property;
   estimated_cost_cents?: number;
   status: 'active' | 'closed' | 'cancelled';
-  result?: VoteResult;
+  result?: VoteResult | { yes_pct: number; no_pct: number };
   owner_veto_used: boolean;
   yes_count: number;
   no_count: number;
   abstain_count: number;
   total_eligible: number;
+  vote_count?: number;
+  yes_pct?: number;
+  no_pct?: number;
   expires_at: string;
+  ends_at?: string;
   closed_at?: string;
   created_at: string;
-  // User-specific
-  my_ballot?: 'yes' | 'no' | 'abstain';
+  my_ballot?: 'yes' | 'no' | 'abstain' | VoteBallotInfo;
 }
 
 export interface VoteResultResponse {
@@ -289,6 +305,14 @@ export interface VoteResultResponse {
   no_pct: number;
   abstain_pct: number;
   closed_at?: string;
+}
+
+export interface Ballot {
+  id: string;
+  vote_id: string;
+  user_id: string;
+  choice: 'yes' | 'no' | 'abstain';
+  created_at: string;
 }
 
 export interface Notification {

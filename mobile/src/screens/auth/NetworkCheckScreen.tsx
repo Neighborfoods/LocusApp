@@ -79,7 +79,7 @@ export default function NetworkCheckScreen() {
             onPress={runPing}
             style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
           >
-            <Icon name="lan-connect" size={20} color="#fff" />
+            <Icon name="web" size={20} color="#fff" />
             <Text style={styles.primaryBtnText}>Check connectivity</Text>
           </TouchableOpacity>
         )}
@@ -124,7 +124,7 @@ export default function NetworkCheckScreen() {
             onPress={handleForceBypass}
             style={[styles.bypassBtn, { borderColor: colors.danger }]}
           >
-            <Icon name="login" size={20} color={colors.danger} />
+            <Icon name="account" size={20} color={colors.danger} />
             <Text style={[styles.bypassBtnText, { color: colors.danger }]}>Force Bypass</Text>
           </TouchableOpacity>
         </View>

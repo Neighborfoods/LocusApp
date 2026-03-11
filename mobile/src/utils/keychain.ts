@@ -32,7 +32,7 @@ export async function getTokens(): Promise<StoredTokens | null> {
       KEYCHAIN_TIMEOUT_MS,
       'getTokens'
     );
-    if (!result || result === false) return fallbackTokens;
+    if (!result) return fallbackTokens;
     const accessToken = result.username;
     const refreshToken = result.password;
     if (!isNonEmptyString(accessToken) || !isNonEmptyString(refreshToken)) {
@@ -73,4 +73,41 @@ export async function clearTokens(): Promise<void> {
   } catch {
     // Ignore: storage may already be clear or inaccessible
   }
+}
+
+const BIOMETRIC_SERVICE = `${SERVICE}.biometric`;
+
+/** Store a token for biometric (Face ID / Touch ID) sign-in. */
+export async function saveBiometricToken(token: string): Promise<void> {
+  try {
+    await Keychain.setGenericPassword('biometric_token', token, {
+      service: BIOMETRIC_SERVICE,
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET,
+      authenticationType: Keychain.AUTHENTICATION_TYPE.BIOMETRICS,
+    });
+  } catch {
+    // Biometric keychain may not be available on simulator or if disabled
+  }
+}
+
+/** Retrieve token for biometric sign-in (prompts Face ID / Touch ID). */
+export async function getBiometricToken(): Promise<string | null> {
+  try {
+    const creds = await Keychain.getGenericPassword({
+      service: BIOMETRIC_SERVICE,
+      authenticationPrompt: { title: 'Sign in to LOCUS' },
+    });
+    if (!creds || typeof creds !== 'object' || !('password' in creds)) return null;
+    return creds.password;
+  } catch {
+    return null;
+  }
+}
+
+/** Clear biometric-stored token. */
+export async function clearBiometricToken(): Promise<void> {
+  try {
+    await Keychain.resetGenericPassword({ service: BIOMETRIC_SERVICE });
+  } catch {}
 }

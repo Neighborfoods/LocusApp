@@ -1,5 +1,5 @@
 import api from './client';
-import { Notification } from '@types/models';
+import { Notification } from '@/types/models';
 
 export const notificationsApi = {
   list: async (page = 1, limit = 30): Promise<Notification[]> => {

@@ -5,7 +5,16 @@
 
 import { AppleDark } from './colors';
 
-export { useTheme } from './useTheme';
+export {
+  ThemeProvider,
+  useTheme,
+  useThemePreference,
+  useThemePreferenceOptional,
+  type ThemePreference,
+  type ThemeColors,
+  LIGHT_THEME,
+  DARK_THEME,
+} from './ThemeContext';
 export {
   Colors,
   AppleLight,

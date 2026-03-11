@@ -1,5 +1,5 @@
 /**
- * API config: simulator and production both use Oracle Cloud Node backend (Nginx :80).
+ * API config: HTTP for TestFlight (self-signed cert bypass). Use HTTPS + CA cert for App Store.
  */
 const API_BASE = 'http://129.146.186.180';
 

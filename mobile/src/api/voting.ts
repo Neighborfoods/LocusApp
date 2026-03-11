@@ -1,5 +1,5 @@
 import api from './client';
-import { Vote, VoteResultResponse, Ballot } from '@types/models';
+import { Vote, VoteResultResponse, Ballot } from '@/types/models';
 
 export interface CreateVotePayload {
   title: string;
